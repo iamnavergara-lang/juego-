@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Sopa de Letras - Violencia contra la Mujer</title>
+  <style>
+    body { font-family: 'Verdana', sans-serif; text-align: center; background: #f9f0ff; }
+    h1 { color: #6a1b9a; text-shadow: 2px 2px #d1c4e9; }
+    #game { display: inline-block; margin-top: 20px; position: relative; }
+    table { border-collapse: collapse; box-shadow: 0 0 10px #d1c4e9; }
+    td {
+      width: 35px; height: 35px; text-align: center; vertical-align: middle;
+      border: 2px solid #ba68c8; cursor: pointer; font-weight: bold; font-size: 18px;
+      background: #f3e5f5; transition: 0.3s; border-radius: 5px;
+    }
+    td:hover { background: #d1c4e9; }
+    td.selected { background: #ce93d8; }
+    td.found { background: #ab47bc; color: #fff; }
+    #word-list { margin-top: 20px; font-size: 18px; color: #6a1b9a; }
+    #word-list li.found { text-decoration: line-through; color: #4a148c; }
+    #timer, #score { font-size: 20px; margin-top: 20px; color: #4a148c; }
+    button { margin: 10px; padding: 12px 25px; font-size: 18px; cursor: pointer; background: #8e24aa; color: #fff; border: none; border-radius: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.2); transition: 0.3s; }
+    button:hover { background: #6a1b9a; }
+    #end-message { font-size: 40px; color: #d500f9; display: none; position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(255,255,255,0.95); padding: 20px 40px; border-radius: 15px; box-shadow: 0 0 15px #ba68c8; z-index: 10; }
+    #end-buttons { display: none; position: absolute; top: 55%; left: 50%; transform: translateX(-50%); z-index: 10; }
+  </style>
+</head>
+<body>
+  <h1>Sopa de Letras: Violencia contra la Mujer</h1>
+  <div id="timer">Tiempo: 90</div>
+  <div id="score">Puntos: 0</div>
+  <div id="game"></div>
+
+  <h3>Palabras a encontrar:</h3>
+  <ul id="word-list"></ul>
+
+  <script>
+    const palabras = ["VIOLENCIA","MUJER","ABUSO","GOLPES","ACOSO","RESPETO","EQUIDAD","DERECHOS","IGUALDAD","LIBERTAD","DENUNCIA","JUSTICIA","PROTECCION","NOALMACHISMO"];
+    const gridSize = 15;
+    let grid, selectedCells, score, time, countdown, gameBlocked;
+
+    function initGame(){
+      grid = Array.from({ length: gridSize }, () => Array(gridSize).fill(""));
+      selectedCells=[];
+      score=0;
+      time=90;
+      gameBlocked=false;
+      document.getElementById("score").textContent="Puntos: 0";
+      document.getElementById("timer").textContent="Tiempo: 90";
+      const gameDiv=document.getElementById("game");
+      gameDiv.innerHTML="";
+
+      function placeWord(word){
+        word=word.toUpperCase();
+        const directions=[[0,1],[1,0],[1,1],[-1,1]];
+        let placed=false;
+        for(let tries=0; tries<100 && !placed; tries++){
+          let dir=directions[Math.floor(Math.random()*directions.length)];
+          let x=Math.floor(Math.random()*gridSize);
+          let y=Math.floor(Math.random()*gridSize);
+          if(x+dir[0]*(word.length-1)>=gridSize||x+dir[0]*(word.length-1)<0) continue;
+          if(y+dir[1]*(word.length-1)>=gridSize||y+dir[1]*(word.length-1)<0) continue;
+          let canPlace=true;
+          for(let i=0;i<word.length;i++){
+            let nx=x+dir[0]*i, ny=y+dir[1]*i;
+            if(grid[ny][nx]!==""&&grid[ny][nx]!==word[i]){canPlace=false; break;}
+          }
+          if(canPlace){
+            for(let i=0;i<word.length;i++){ let nx=x+dir[0]*i, ny=y+dir[1]*i; grid[ny][nx]=word[i]; }
+            placed=true;
+          }
+        }
+      }
+      palabras.forEach(placeWord);
+
+      const letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      for(let y=0;y<gridSize;y++){
+        for(let x=0;x<gridSize;x++){ if(!grid[y][x]) grid[y][x]=letters[Math.floor(Math.random()*letters.length)]; }
+      }
+
+      const table=document.createElement("table");
+      grid.forEach((row,y)=>{
+        const tr=document.createElement("tr");
+        row.forEach((cell,x)=>{
+          const td=document.createElement("td");
+          td.textContent=cell;
+          td.dataset.x=x; td.dataset.y=y;
+          td.addEventListener("click",()=>selectCell(td));
+          tr.appendChild(td);
+        });
+        table.appendChild(tr);
+      });
+      gameDiv.appendChild(table);
+
+      const wordList=document.getElementById("word-list");
+      wordList.innerHTML="";
+      palabras.forEach(p=>{ const li=document.createElement("li"); li.textContent=p; wordList.appendChild(li); });
+
+      clearInterval(countdown);
+      countdown=setInterval(()=>{
+        if(time>0){ time--; document.getElementById("timer").textContent="Tiempo: "+time; }
+        else{
+          clearInterval(countdown); gameBlocked=true;
+          showEndMessage();
+        }
+      },1000);
+    }
+
+    function showEndMessage(){
+      let endMsg=document.getElementById("end-message");
+      let endBtns=document.getElementById("end-buttons");
+      if(!endMsg){
+        endMsg=document.createElement("div"); endMsg.id="end-message"; endMsg.textContent="⏰ Tiempo agotado";
+        document.getElementById("game").appendChild(endMsg);
+      }
+      if(!endBtns){
+        endBtns=document.createElement("div"); endBtns.id="end-buttons";
+        const btnRestart=document.createElement("button"); btnRestart.textContent="🔄 Reiniciar Juego"; btnRestart.onclick=initGame;
+        const btnPlayAgain=document.createElement("button"); btnPlayAgain.textContent="🎯 Volver a Jugar"; btnPlayAgain.onclick=initGame;
+        endBtns.appendChild(btnRestart); endBtns.appendChild(btnPlayAgain);
+        document.getElementById("game").appendChild(endBtns);
+      }
+      endMsg.style.display="block";
+      endBtns.style.display="block";
+    }
+
+    function selectCell(td){
+      if(td.classList.contains("found")||gameBlocked) return;
+      td.classList.toggle("selected");
+      const coord=td.dataset.y+","+td.dataset.x;
+      if(selectedCells.includes(coord)){ selectedCells=selectedCells.filter(c=>c!==coord); }
+      else{ selectedCells.push(coord); }
+      checkWord();
+    }
+
+    function checkWord(){
+      const lettersSelected=selectedCells.map(c=>{const [y,x]=c.split(",").map(Number); return grid[y][x];}).join("");
+      const reversed=lettersSelected.split("").reverse().join("");
+      if(palabras.includes(lettersSelected)||palabras.includes(reversed)){ markFound(); }
+    }
+
+    function markFound(){
+      selectedCells.forEach(c=>{
+        const [y,x]=c.split(",").map(Number);
+        const td=document.querySelector(`td[data-x='${x}'][data-y='${y}']`);
+        td.classList.add("found"); td.classList.remove("selected");
+      });
+      const word=selectedCells.map(c=>{const [y,x]=c.split(",").map(Number); return grid[y][x];}).join("");
+      document.querySelectorAll("#word-list li").forEach(li=>{ if(li.textContent===word||li.textContent===word.split("").reverse().join("")){ li.classList.add("found"); }});
+      document.getElementById("score").textContent="Puntos: "+(parseInt(document.getElementById("score").textContent.split(": ")[1])+10);
+      selectedCells=[];
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
